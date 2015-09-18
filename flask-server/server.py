@@ -136,13 +136,14 @@ def extract_feature(filename):
     remove(os.path.join(full_path, 'single', filename))
     return res
 
+
 def ann_rec(feature):
     result = lsh_engine.query(feature)
     # print result[:5]
     name = '_'.join(result[0][0].split('_')[:-1])
     idx = celebrities_map[name]
     res = query_imdb(idx)
-    res['Confidence'] = result[0][1]
+    res['Confidence'] = 1 - float(result[0][1])
     return res
 
 
