@@ -82,40 +82,40 @@ int main(int argc, char** argv)
     zmq::socket_t socket (context, ZMQ_REP);
     socket.bind("tcp://*:5566");
 
-    try
+    // This example takes in a shape model file and then a list of images to
+    // process.  We will take these filenames in as command line arguments.
+    // Dlib comes with example images in the examples/faces folder so give
+    // those as arguments to this program.
+    if (argc == 1)
     {
-        // This example takes in a shape model file and then a list of images to
-        // process.  We will take these filenames in as command line arguments.
-        // Dlib comes with example images in the examples/faces folder so give
-        // those as arguments to this program.
-        if (argc == 1)
+        cout << "Call this program like this:" << endl;
+        cout << "./face_landmark_detection_ex shape_predictor_68_face_landmarks.dat faces/*.jpg" << endl;
+        cout << "\nYou can get the shape_predictor_68_face_landmarks.dat file from:\n";
+        cout << "http://sourceforge.net/projects/dclib/files/dlib/v18.10/shape_predictor_68_face_landmarks.dat.bz2" << endl;
+        return 0;
+    }
+    clock_t tstart = clock(); 
+
+    // We need a face detector.  We will use this to get bounding boxes for
+    // each face in an image.
+    frontal_face_detector detector = get_frontal_face_detector();
+    // And we also need a shape_predictor.  This is the tool that will predict face
+    // landmark positions given an image and face bounding box.  Here we are just
+    // loading the model from the shape_predictor_68_face_landmarks.dat file you gave
+    // as a command line argument.
+    shape_predictor sp;
+    deserialize(argv[1]) >> sp;
+    cout << "(Init) took " << float( clock () - tstart ) /  CLOCKS_PER_SEC << " second(s)." << endl;
+
+    string src_dir, dest_dir, imgae_file;
+    src_dir = argv[2];
+    dest_dir = argv[3];
+
+    zmq::message_t request;
+    while(true)
+    {
+        try
         {
-            cout << "Call this program like this:" << endl;
-            cout << "./face_landmark_detection_ex shape_predictor_68_face_landmarks.dat faces/*.jpg" << endl;
-            cout << "\nYou can get the shape_predictor_68_face_landmarks.dat file from:\n";
-            cout << "http://sourceforge.net/projects/dclib/files/dlib/v18.10/shape_predictor_68_face_landmarks.dat.bz2" << endl;
-            return 0;
-        }
-        clock_t tstart = clock(); 
-
-        // We need a face detector.  We will use this to get bounding boxes for
-        // each face in an image.
-        frontal_face_detector detector = get_frontal_face_detector();
-        // And we also need a shape_predictor.  This is the tool that will predict face
-        // landmark positions given an image and face bounding box.  Here we are just
-        // loading the model from the shape_predictor_68_face_landmarks.dat file you gave
-        // as a command line argument.
-        shape_predictor sp;
-        deserialize(argv[1]) >> sp;
-        cout << "(Init) took " << float( clock () - tstart ) /  CLOCKS_PER_SEC << " second(s)." << endl;
-
-        string src_dir, dest_dir, imgae_file;
-        src_dir = argv[2];
-        dest_dir = argv[3];
-
-        while(true)
-        {
-            zmq::message_t request;
             socket.recv(&request);
             imgae_file = string(static_cast<char*>(request.data()), request.size());
             cout << "recieve signal ready" << imgae_file << endl;
@@ -187,11 +187,11 @@ int main(int argc, char** argv)
             memcpy((void *) reply.data(), "Done", 4);
             socket.send(reply);
         }
-    }
-    catch (exception& e)
-    {
-        cout << "\nexception thrown!" << endl;
-        cout << e.what() << endl;
+        catch (exception& e)
+        {
+            cout << "\nexception thrown!" << endl;
+            cout << e.what() << endl;
+        }
     }
 }
 

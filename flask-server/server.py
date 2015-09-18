@@ -36,7 +36,7 @@ caffemodel = os.path.join(
 feature_extractor = Feature(model, caffemodel, 50, 'pool5')
 
 app.config['UPLOAD_FOLDER'] = os.path.join(base_path, '../', 'data', 'input')
-app.config['ALLOWED_EXTENSIONS'] = set(['jpg', 'jpeg', 'gif'])
+app.config['ALLOWED_EXTENSIONS'] = set(['jpg', 'jpeg', 'gif', 'png'])
 
 
 client = MongoClient('10.116.66.16', 27017)
@@ -69,28 +69,36 @@ def face_rec():
             print 'Downsample to size : ', size
             img.thumbnail(size, Image.ANTIALIAS)
             img.save(file_path)
-        print 'Resize take : ', time.time() - t_tmp, ' seconds'
-        t_tmp = time.time()
 
-        socket.send(img_name)
-        print socket.recv()
-        print 'Detect take : ', time.time() - t_tmp, ' seconds'
-        t_tmp = time.time()
+            print 'Resize take : ', time.time() - t_tmp, ' seconds'
+            t_tmp = time.time()
 
-        feature = extract_feature(img_name)
-        print 'Feature take : ', time.time() - t_tmp, ' seconds'
-        t_tmp = time.time()
-        if 'Error' not in feature:
-            res = ann_rec(feature)
-            res['status'] = 'Sucesses'
+            socket.send(img_name)
+            print socket.recv()
+            print 'Detect take : ', time.time() - t_tmp, ' seconds'
+            t_tmp = time.time()
+
+            # dlib always return jpg file
+            filename, file_extension = os.path.splitext(img_name)
+            img_name = filename + '.jpg'
+
+            feature = extract_feature(img_name)
+            print 'Feature take : ', time.time() - t_tmp, ' seconds'
+            t_tmp = time.time()
+            if 'Error' not in feature:
+                res = ann_rec(feature)
+                res['status'] = 'Sucesses'
+            else:
+                res = {}
+                res['status'] = 'Error'
+                res['error_msg'] = feature
+            res['time'] = time.time() - tstart
+            print 'Search take : ', time.time() - t_tmp, ' seconds'
+            print 'Total take : ', res['time'], ' seconds'
         else:
             res = {}
             res['status'] = 'Error'
-            res['error_msg'] = feature
-        res['time'] = time.time() - tstart
-        print 'Search take : ', time.time() - t_tmp, ' seconds'
-        print 'Total take : ', res['time'], ' seconds'
-
+            res['error_msg'] = 'File format is not allowed'
         print res
         return jsonify(res)
 
