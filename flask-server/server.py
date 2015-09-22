@@ -173,10 +173,13 @@ def extract_feature(filename):
 def ann_rec(feature):
     result = lsh_engine.query(feature)
     # print result[:5]
+    sim = ['_'.join(item[0].split('_')[:-1]) for item in result]
     name = '_'.join(result[0][0].split('_')[:-1])
     idx = celebrities_map[name]
     res = query_imdb(idx)
     res['Confidence'] = 1 - float(result[0][1])
+    print sim
+    res['Sim'] = f7(sim)[:5]
     return res
 
 
@@ -192,6 +195,12 @@ def to_utf8(text):
         return text.encode('utf8', 'replace')
     else:
         return None
+
+
+def f7(seq):
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]
 
 
 def run(cmd, need_return=False):
