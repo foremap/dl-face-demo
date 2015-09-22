@@ -1,6 +1,4 @@
 import numpy as np
-import os
-import sys
 import csv
 import random
 import time
@@ -24,7 +22,7 @@ class LSHSearch:
         self.ground_truth = defaultdict(int)
 
         # Create permutations meta-hash
-        permutations2 = HashPermutationMapper('permut2')
+        self.permutations2 = HashPermutationMapper('permut2')
 
         tmp_feature = defaultdict(str)
         with open(feature_file, 'rb') as f:
@@ -41,12 +39,17 @@ class LSHSearch:
         random.shuffle(matrix)
         print 'PCA matric : ', len(matrix)
 
-        rbp_perm2 = PCABinaryProjections('testPCABPHash', lsh_project_num, matrix)
-        permutations2.add_child_hash(rbp_perm2)
+        rbp_perm2 = PCABinaryProjections(
+            'testPCABPHash', lsh_project_num, matrix)
+        self.permutations2.add_child_hash(rbp_perm2)
 
         # Create engine
         nearest = NearestFilter(self.neighbour)
-        self.engine = Engine(self.dimension, lshashes=[permutations2], distance=CosineDistance(), vector_filters=[nearest])
+        self.engine = Engine(
+            self.dimension,
+            lshashes=[self.permutations2],
+            distance=CosineDistance(),
+            vector_filters=[nearest])
 
     def build(self):
         with open(self.feature_file, 'rb') as f:
@@ -54,11 +57,19 @@ class LSHSearch:
             for name, feature in reader:
                 self.face_feature[name] = feature
                 person = '_'.join(name.split('_')[:-1])
-                self.ground_truth[person] += 1 
+                self.ground_truth[person] += 1
 
         for item in self.face_feature.keys():
             v = map(float, self.face_feature[item].split(','))
             self.engine.store_vector(v, item)
+
+    def update(self, person, feature):
+        print feature
+        v = map(float, feature.split(','))
+        epoch_time = long(time.time())
+        f_name = person + '_' + str(epoch_time)
+        print f_name
+        self.engine.store_vector(v, f_name)
 
     def query(self, person_feature):
         dists = []
@@ -72,5 +83,5 @@ class LSHSearch:
         scores = scores + [x[2] for x in results]
 
         res = zip(dists, scores)
-        res.sort(key = lambda t: t[1])
+        res.sort(key=lambda t: t[1])
         return res[:self.neighbour]

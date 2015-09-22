@@ -109,6 +109,39 @@ def imdb_data(index):
     return jsonify(res)
 
 
+@app.route('/tag', methods=['POST'])
+def tag():
+    img = request.files['file']
+    img_name = to_utf8(img.filename)
+    person = to_utf8(request.form['tag'])
+    print img_name, person
+    res = {}
+    if img and allowed_file(img_name):
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], img_name)
+        img = Image.open(img)
+        (width, height) = img.size
+        ratio = min(maxwidth/width, maxheight/height, 1)
+        size = int(width * ratio), int(height * ratio)
+        print 'Downsample to size : ', size
+        img.thumbnail(size, Image.ANTIALIAS)
+        img.save(file_path)
+
+        socket.send(img_name)
+        print socket.recv()
+
+        # dlib always return jpg file
+        filename, file_extension = os.path.splitext(img_name)
+        img_name = filename + '.jpg'
+
+        feature = extract_feature(img_name)
+        lsh_engine.update(person, feature)
+        res['status'] = 'Sucesses'
+    else:
+        res['status'] = 'Error'
+        res['error_msg'] = 'File format is not allowed'
+    return jsonify(res)
+
+
 # Function Define #
 def query_imdb(index):
     db = client.face_demo
@@ -192,3 +225,4 @@ if __name__ == '__main__':
 
 # Test #
 # curl -F "file=@test.jpg;" http://localhost:8888/face_rec
+# curl -F "file=@test.jpg" -F "tag=girl_generation" http://localhost:8888/tag
